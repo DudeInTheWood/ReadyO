@@ -2,11 +2,17 @@
 
 A cassette-inspired Android player for internet radio and local music. Browse live stations, link a music folder, or scan your device. Swipe up on the mini player to open the animated cassette deck.
 
+## Screenshots
+
 <p>
-  <img src="docs/screenshots/radio.png" width="30%" alt="Radio tuner and numbered station presets">
-  <img src="docs/screenshots/library.png" width="30%" alt="Local music collection with numbered record sleeves">
-  <img src="docs/screenshots/player.png" width="30%" alt="Cassette player with illuminated transport controls">
+  <img src="https://raw.githubusercontent.com/DudeInTheWood/MyImage/5ef06f65f5f7cee74be7e9d3b32c8b705d95b033/readyo/radio.webp" width="30%" alt="Radio tuner and numbered station presets">
+  <img src="https://raw.githubusercontent.com/DudeInTheWood/MyImage/5ef06f65f5f7cee74be7e9d3b32c8b705d95b033/readyo/library.webp" width="30%" alt="Local music collection with numbered record sleeves">
+  <img src="https://raw.githubusercontent.com/DudeInTheWood/MyImage/5ef06f65f5f7cee74be7e9d3b32c8b705d95b033/readyo/player.webp" width="30%" alt="Cassette player with illuminated transport controls">
 </p>
+
+### Now Playing on an unfolded screen
+
+<img src="https://raw.githubusercontent.com/DudeInTheWood/MyImage/5ef06f65f5f7cee74be7e9d3b32c8b705d95b033/readyo/unfolded.webp" width="600" alt="Unfolded Now Playing screen with the cassette and playback controls side by side">
 
 ## Run on Android
 
