@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>ReadyO · Archive Edition — List Redesign</title>
+<style>
+:root{
+  --color-bg:#0E0F10;--color-surface:#1A1C1D;--color-surface-raised:#252729;--color-surface-hover:#303335;
+  --color-text-primary:#F0E7D7;--color-text-secondary:#B8AA96;--color-text-muted:#8E867A;
+  --color-accent-primary:#D57B49;--color-accent-secondary:#9CAA88;--color-danger:#DE816C;
+  --color-border:#434541;--color-on-accent:#1C1510;--color-label-surface:#DDC8AB;--color-label-text:#30251C;
+  --frame:#44413C;--frame-deep:#191918;--metal:#302D29;--rail:#222321;--folio:#D7C8AB;
+  --ink:#0D100F;--cast:#111211;--shadow:#0009;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --color-bg:#F0EEE8;--color-surface:#FAF8F2;--color-surface-raised:#E6E2D7;--color-surface-hover:#EAE6DB;
+  --color-text-primary:#252C28;--color-text-secondary:#657069;--color-text-muted:#89918A;
+  --color-accent-primary:#A64F36;--color-accent-secondary:#65735F;--color-danger:#B6533C;
+  --color-border:#D7D3C9;--color-on-accent:#FFF9EE;--color-label-surface:#E9E4D7;--color-label-text:#242A26;
+  --frame:#777A71;--frame-deep:#E7E6DD;--metal:#DAD7CD;--rail:#EBE9E0;--folio:#D9D1BE;
+  --ink:#30372F;--cast:#E6E2D8;--shadow:#3039292b;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--color-bg);color:var(--color-text-primary);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.22;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.45' numOctaves='2' seed='8' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.13'/%3E%3C/svg%3E");mix-blend-mode:soft-light}
+button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid var(--color-accent-primary);outline-offset:3px}
+button{touch-action:manipulation}
+.shell{width:min(1180px,100%);margin:0 auto;padding:40px 40px 65px;position:relative;z-index:1}
+.pagehead{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:31px;border-bottom:1px solid var(--color-border);padding-bottom:24px}
+.eyebrow,.micro{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:1.5px;font-weight:650;font-size:10px}
+.eyebrow{color:var(--color-accent-primary)}
+.brand{font:italic 55px/.95 Georgia,'Times New Roman',serif;letter-spacing:-3px;margin:10px 0 11px}
+.brand small{font:normal 11px ui-monospace,monospace;letter-spacing:1.2px;color:var(--color-text-muted);margin-left:12px;vertical-align:middle;text-transform:uppercase}
+.intro{margin:0;color:var(--color-text-secondary);font-size:13px;line-height:1.7;max-width:500px}
+.themeSwitch{flex-shrink:0;display:flex;align-items:center;gap:10px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);padding:12px 15px;border-radius:8px;font-size:12px}
+.themeSwitch:hover{background:var(--color-surface-hover)}
+.gallery{display:flex;gap:34px;justify-content:center;align-items:flex-start}
+.study{min-width:0;flex:0 1 392px}
+.studylabel{display:flex;align-items:center;gap:12px;margin-bottom:15px;color:var(--color-text-muted);font:600 10px ui-monospace,monospace;letter-spacing:1.5px}
+.studylabel::after{content:"";height:1px;background:var(--color-border);flex:1}
+.phone{height:800px;width:100%;position:relative;overflow:hidden;border-radius:35px;border:7px solid var(--frame);background:var(--color-bg);box-shadow:0 5px 0 var(--frame-deep),0 22px 50px var(--shadow)}
+.phone::after{content:"";position:absolute;inset:0;border:1px solid #8d867c24;border-radius:27px;pointer-events:none;z-index:30}
+.statusbar{height:32px;display:flex;justify-content:space-between;align-items:center;padding:5px 21px 0;color:var(--color-text-secondary);font-weight:700;font-size:11px}
+.scroll{position:absolute;inset:32px 0 69px;overflow-y:auto;scrollbar-width:none;padding:10px 16px 104px}
+.scroll::-webkit-scrollbar{display:none}
+.appbar{display:flex;align-items:center;justify-content:space-between;height:37px}
+.wordmark{font:italic 23px Georgia,serif;letter-spacing:-1px}.wordmark i{color:var(--color-accent-primary)}
+.appbar .serial{font:600 9px ui-monospace,monospace;letter-spacing:1.2px;color:var(--color-text-muted)}
+.view-kicker{font:600 9px ui-monospace,monospace;letter-spacing:1.5px;color:var(--color-accent-primary);margin-top:21px}
+.view-title{font:normal 36px/1.05 Georgia,'Times New Roman',serif;letter-spacing:-.8px;margin:7px 0 6px}
+.view-sub{font-size:11px;color:var(--color-text-secondary);margin:0}
+/* Radio: physical tuner strip rather than a generic banner */
+.dial{margin-top:20px;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:9px;padding:11px 13px 10px;box-shadow:inset 0 1px #ffffff12;position:relative}
+.dial-head{display:flex;justify-content:space-between;align-items:center;font:600 9px ui-monospace,monospace;color:var(--color-text-muted);letter-spacing:1.1px}
+.dial-head strong{color:var(--color-accent-secondary);font-size:9px}
+.dial-lines{height:30px;position:relative;margin-top:9px;border-bottom:1px solid var(--color-border);background:repeating-linear-gradient(90deg,transparent 0,transparent calc(12.5% - 1px),var(--color-text-muted) calc(12.5% - 1px),var(--color-text-muted) 12.5%);opacity:.9;mask-image:linear-gradient(#000 0 16px,transparent 16px)}
+.dial-needle{position:absolute;height:29px;width:2px;background:var(--color-accent-primary);top:1px;left:20%;box-shadow:0 0 0 3px #d57b4925;transition:left .35s ease}
+.dial-labels{display:flex;justify-content:space-between;font:500 9px ui-monospace,monospace;color:var(--color-text-muted);margin-top:3px}
+.search{margin-top:17px;height:42px;width:100%;border:1px solid var(--color-border);background:var(--color-surface);border-radius:6px;color:var(--color-text-primary);font-size:12px;padding:0 13px;outline-color:var(--color-accent-primary)}
+.filterbar{display:flex;gap:6px;overflow-x:auto;padding:11px 0 2px;scrollbar-width:none}
+.filterbar button{flex:none;border:1px solid var(--color-border);border-radius:4px;background:transparent;color:var(--color-text-secondary);font:600 9px ui-monospace,monospace;letter-spacing:.7px;padding:8px 10px;white-space:nowrap}
+.filterbar button.selected{background:var(--color-label-surface);border-color:var(--color-label-surface);color:var(--color-label-text)}
+.listhead{display:flex;align-items:center;justify-content:space-between;margin:20px 0 11px}
+.listhead h2{margin:0;font:normal 20px Georgia,serif}
+.listhead span{font:600 9px ui-monospace,monospace;letter-spacing:1px;color:var(--color-text-muted)}
+.station-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;margin-bottom:9px;overflow:hidden;position:relative;transition:background .2s,border .2s;box-shadow:inset 0 1px #ffffff08}
+.station-card.active{border-color:var(--color-accent-primary);background:var(--color-surface-raised)}
+.station-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--station-accent,var(--color-accent-secondary));opacity:.7}
+.station-card.active::before{background:var(--color-accent-primary);opacity:1}
+.station-meta-strip{display:flex;justify-content:space-between;padding:9px 11px 2px 14px;align-items:center}
+.station-meta-strip .left{font:600 9px ui-monospace,monospace;letter-spacing:1.1px;color:var(--color-text-muted)}
+.station-meta-strip .right{font:600 9px ui-monospace,monospace;letter-spacing:.8px;color:var(--color-accent-secondary)}
+.station-body{display:flex;align-items:center;gap:9px;padding:6px 9px 10px 13px}
+.station-press{flex:1;min-width:0;display:flex;align-items:center;gap:11px;border:0;background:none;color:var(--color-text-primary);text-align:left;padding:0}
+.station-logo{width:58px;height:58px;flex:0 0 58px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;background:var(--logo-bg,#3C4339);border:1px solid #ffffff16;position:relative;color:var(--logo-fg,#E4D8BE);border-radius:3px;overflow:hidden}
+.station-logo:before{content:"";position:absolute;inset:6px;border:1px solid currentColor;opacity:.32;pointer-events:none}
+.station-logo b{font:italic 25px/.9 Georgia,serif;letter-spacing:-1px}
+.station-logo small{font:700 8px ui-monospace,monospace;letter-spacing:1px}
+.station-title{display:block;font:normal 17px/1.1 Georgia,serif;letter-spacing:-.25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.station-desc{display:block;margin-top:7px;font-size:10px;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.station-actions{display:flex;flex-direction:column;gap:5px;align-items:center}
+.fav{height:26px;width:32px;border:0;background:none;color:var(--color-text-muted);font-size:19px;line-height:1}
+.fav.on{color:var(--color-accent-primary)}
+.station-key{height:35px;width:35px;border:1px solid var(--color-border);border-radius:5px;background:var(--color-surface-hover);color:var(--color-text-primary);font-size:15px;box-shadow:0 2px 0 var(--cast)}
+.station-card.active .station-key{background:var(--color-accent-primary);color:var(--color-on-accent);border-color:var(--color-accent-primary)}
+.station-foot{height:25px;border-top:1px solid var(--color-border);background:color-mix(in srgb,var(--color-bg) 45%,var(--color-surface));display:flex;align-items:center;justify-content:space-between;padding:0 13px;font:600 9px ui-monospace,monospace;letter-spacing:.6px;color:var(--color-text-muted)}
+.led{height:5px;width:5px;display:inline-block;border-radius:50%;background:var(--color-accent-primary);vertical-align:2px;margin-right:6px}
+.station-card.active .station-foot{color:var(--color-accent-primary)}
+.levels{display:inline-flex;gap:2px;align-items:center;height:13px;vertical-align:middle}.levels i{width:2px;height:4px;border-radius:2px;background:var(--color-accent-primary)}
+.active .levels i:nth-child(1){animation:level .7s .1s ease-in-out infinite alternate}.active .levels i:nth-child(2){animation:level .6s .3s ease-in-out infinite alternate}.active .levels i:nth-child(3){animation:level .9s .2s ease-in-out infinite alternate}
+@keyframes level{to{height:12px}}
+/* Music: catalog sleeves with more distinct featured entry */
+.library-sleeve{margin-top:19px;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:7px;background:var(--color-label-surface);color:var(--color-label-text);box-shadow:inset 0 3px 0 #ac6f4c}
+.library-sleeve .micro{color:#7B6A56;font-size:9px}.library-sleeve strong{display:block;font:italic 22px Georgia,serif;letter-spacing:-.4px;margin-top:4px}
+.library-sleeve small{font:600 9px ui-monospace,monospace;letter-spacing:.75px;color:#796852;display:block;margin-top:5px}
+.stamp{border:1px solid #8C765A;border-radius:50%;width:54px;height:54px;flex-shrink:0;display:grid;place-items:center;transform:rotate(-10deg);font:700 10px/1.3 ui-monospace,monospace;text-align:center;letter-spacing:1px;opacity:.7}
+.music-actions{display:flex;gap:8px;margin:14px 0 0}
+.music-actions button{height:37px;flex:1;background:var(--color-surface-raised);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:5px;font-size:11px}
+.music-actions button.primary{background:var(--color-accent-primary);border-color:var(--color-accent-primary);color:var(--color-on-accent);font-weight:700}
+.music-head{margin-top:18px}
+.track-row{display:flex;align-items:center;gap:10px;min-height:80px;padding:9px 7px 9px 0;border-bottom:1px solid var(--color-border);position:relative}
+.track-row.active{padding:11px 9px;margin:4px -7px 6px 0;border:1px solid var(--color-border);border-left:3px solid var(--color-accent-primary);border-radius:4px;background:var(--color-surface-raised)}
+.track-number{font:600 10px ui-monospace,monospace;color:var(--color-text-muted);min-width:14px;text-align:center;align-self:center}
+.track-row.active .track-number{color:var(--color-accent-primary)}
+.track-cover{width:53px;height:57px;flex:0 0 53px;border:1px solid #ffffff2a;border-radius:2px;position:relative;overflow:hidden;background:var(--cover-bg,#676456);box-shadow:2px 2px 0 #08080719}
+.track-cover::before{content:"";position:absolute;inset:-17px 12px 18px -10px;border-radius:50%;border:13px solid var(--cover-ink,#DAA17E);opacity:.75}
+.track-cover::after{content:"";position:absolute;right:4px;bottom:5px;font:italic 18px Georgia,serif;color:var(--cover-ink,#DAA17E);opacity:.8}
+.track-cover .record{position:absolute;right:-14px;top:-9px;width:47px;height:47px;border-radius:50%;background:repeating-radial-gradient(circle,#151619 0 2px,#343636 2px 3px);box-shadow:0 0 0 2px #fff2;opacity:.5}
+.track-cover .record::after{content:"";position:absolute;inset:19px;border-radius:50%;background:var(--cover-ink,#DAA17E)}
+.track-cover .cover-word{position:absolute;bottom:6px;left:5px;font:700 8px ui-monospace,monospace;color:#F4EADB;text-transform:uppercase;letter-spacing:.4px;z-index:2;text-shadow:0 1px 2px #0007}
+.track-main{flex:1;min-width:0;background:none;border:0;color:var(--color-text-primary);text-align:left;padding:0}
+.track-title{display:block;font:normal 17px/1.12 Georgia,serif;letter-spacing:-.25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-artist{display:block;color:var(--color-text-secondary);font-size:10px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-type{display:inline-block;margin-top:6px;font:600 8px ui-monospace,monospace;letter-spacing:.8px;color:var(--color-accent-secondary)}
+.track-right{display:flex;flex-direction:column;gap:4px;align-items:flex-end;justify-content:center}
+.duration{font:10px ui-monospace,monospace;color:var(--color-text-muted)}
+.more{border:0;background:none;color:var(--color-text-secondary);font-size:20px;width:27px;height:30px}
+.track-progress{height:2px;background:var(--color-border);border-radius:3px;width:100%;margin-top:7px;overflow:hidden}
+.track-progress i{display:block;width:37%;height:100%;background:var(--color-accent-primary)}
+/* Chrome / bottom bars */
+.mini{position:absolute;bottom:69px;left:9px;right:9px;height:57px;z-index:12;border:1px solid var(--color-border);background:var(--color-surface-raised);border-radius:7px;display:flex;gap:10px;align-items:center;padding:6px 9px;box-shadow:0 -5px 22px #0002}
+.mini-symbol{height:39px;width:39px;flex:0 0 39px;border-radius:3px;display:grid;place-items:center;background:var(--color-label-surface);color:var(--color-label-text);font:italic 22px Georgia,serif}
+.mini-title{font-size:11px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-source{font:600 8px ui-monospace,monospace;color:var(--color-text-muted);letter-spacing:1px;margin-top:5px;display:block}
+.mini button{margin-left:auto;width:39px;height:39px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-surface);color:var(--color-text-primary);font-size:17px}
+.bottom{position:absolute;bottom:0;left:0;right:0;height:69px;display:flex;justify-content:center;gap:43px;align-items:center;background:var(--color-bg);border-top:1px solid var(--color-border);z-index:11}
+.bottom button{border:0;background:transparent;font-size:11px;color:var(--color-text-muted);min-width:100px;display:grid;justify-items:center;gap:5px;padding:8px}
+.bottom button i{font-style:normal;font-size:17px}.bottom button.active{color:var(--color-accent-primary)}
+.blank{padding:20px 5px 30px;text-align:center;color:var(--color-text-muted);font-size:12px;line-height:1.6}
+.toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);color:var(--color-label-text);background:var(--color-label-surface);font-size:12px;font-weight:650;padding:12px 20px;border-radius:4px;opacity:0;transition:transform .2s,opacity .2s;pointer-events:none;z-index:100;box-shadow:0 10px 35px var(--shadow)}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.caption{font-size:11px;line-height:1.6;color:var(--color-text-muted);margin:15px 4px;max-width:370px}
+.footnote{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-top:20px;border-top:1px solid var(--color-border);padding-top:19px;color:var(--color-text-secondary);font-size:12px;line-height:1.7}
+.footnote strong{color:var(--color-text-primary)}
+@media(max-width:900px){.shell{padding:30px 16px 50px}.gallery{gap:18px}.pagehead{align-items:start}.study{flex-basis:390px}}
+@media(max-width:740px){.gallery{flex-direction:column;align-items:center;gap:25px}.study{width:min(390px,100%);flex:auto}.phone{height:785px}.pagehead{align-items:start;flex-direction:column}.brand{font-size:45px}.footnote{flex-direction:column}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="pagehead">
+    <div>
+      <div class="eyebrow">ReadyO / UI STUDY 03 · LIST COLLECTIONS</div>
+      <div class="brand">The archive.<small>V2.1 / cassette edition</small></div>
+      <p class="intro">A more tactile station directory and local music catalog. Same features and screen IDs—less generic streaming UI, more collected sound.</p>
+    </div>
+    <button class="themeSwitch" id="themeToggle" onclick="toggleTheme()"><span aria-hidden="true">◐</span> <span id="themeLabel">Switch to light</span></button>
+  </header>
+  <div class="gallery">
+    <section class="study" id="radioPhone">
+      <div class="studylabel">R2 / RADIO SEARCH · STATIONROW</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ◖</span></div>
+        <main class="scroll" id="radioScroll" aria-label="Radio station list preview">
+          <div class="appbar"><div class="wordmark">ready<i>o.</i></div><div class="serial">ARCHIVE / FM</div></div>
+          <div class="view-kicker">01 / THE WORLD ON TAPE</div>
+          <h1 class="view-title">On the dial.</h1>
+          <p class="view-sub">Find a station worth keeping.</p>
+          <div class="dial">
+            <div class="dial-head"><span>STATION INDEX / PRESETS</span><strong id="dialStatus">● ON AIR / 01</strong></div>
+            <div class="dial-lines"><i id="needle" class="dial-needle"></i></div>
+            <div class="dial-labels"><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span></div>
+          </div>
+          <input class="search" id="radioQuery" type="search" placeholder="⌕   Search stations, genres..." oninput="setRadioQuery(this.value)" aria-label="Search radio stations" />
+          <div class="filterbar" id="radioFilters"></div>
+          <div class="listhead"><h2>Station index</h2><span id="stationCount">00 PRESETS</span></div>
+          <div id="stationList"></div>
+          <div class="blank">DEMO STATIONS · RADIO BROWSER DATA IN PRODUCTION</div>
+        </main>
+        <div class="mini" id="radioMini"></div>
+        <nav class="bottom"><button class="active" onclick="focusPhone('radio')"><i>◉</i>Radio</button><button onclick="focusPhone('music')"><i>♫</i>My Music</button></nav>
+      </div>
+      <p class="caption">Tuner index + numbered preset cards. Brand plate, metadata, favorite and mechanical play key. Active station gets an illuminated edge and lightweight motion.</p>
+    </section>
+    <section class="study" id="musicPhone">
+      <div class="studylabel">M2 / MUSIC COLLECTION · TRACKROW</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ◖</span></div>
+        <main class="scroll" id="musicScroll" aria-label="Local music list preview">
+          <div class="appbar"><div class="wordmark">ready<i>o.</i></div><div class="serial">ARCHIVE / LOCAL</div></div>
+          <div class="view-kicker">02 / YOUR PERSONAL COLLECTION</div>
+          <h1 class="view-title">The collection.</h1>
+          <p class="view-sub">The sound you've kept. Anywhere.</p>
+          <div class="library-sleeve">
+            <div><span class="micro">READY O. / INDEX CARD</span><strong>Songs, side B.</strong><small>05 TRACKS / LOCAL DEMO</small></div>
+            <span class="stamp">TYPE<br>I / 90</span>
+          </div>
+          <div class="music-actions"><button class="primary" onclick="playAll()">▶ &nbsp; Play all</button><button onclick="shuffleMusic()">⤨ &nbsp; Shuffle</button></div>
+          <input class="search" type="search" placeholder="⌕   Find a song or artist..." aria-label="Search songs and artists" oninput="setMusicQuery(this.value)" />
+          <div class="listhead music-head"><h2>All songs</h2><span id="trackCount">05 TRACKS</span></div>
+          <div id="trackList"></div>
+          <div class="blank">DEMO TRACKS · MEDIASTORE / FILES IN PRODUCTION</div>
+        </main>
+        <div class="mini" id="musicMini"></div>
+        <nav class="bottom"><button onclick="focusPhone('radio')"><i>◉</i>Radio</button><button class="active" onclick="focusPhone('music')"><i>♫</i>My Music</button></nav>
+      </div>
+      <p class="caption">Album-sleeve artwork, track index, richer typography, lightweight metadata and a distinct currently playing state. Normal rows stay lean for long libraries.</p>
+    </section>
+  </div>
+  <footer class="footnote"><div><strong>Stable mapping:</strong> R1/R2/R3 → <code>StationRow</code>; M1/M2/M3 → <code>TrackRow</code>, <code>QueueTrackRow</code>.</div><div><strong>Art direction:</strong> dark Archive Edition by default. Light mode matches the existing V2 semantic color tokens. No additional settings screen.</div></footer>
+</div>
+<div class="toast" role="status" aria-live="polite" id="toast"></div>
+<script>
+const stations=[
+  {id:'night',number:'01',name:'Nightshift Radio',meta:'Japan · Jazz / Soul',label:'AFTER HOURS',mark:'N',submark:'88',bg:'#3B4239',fg:'#D8CFB8',accent:'#9CAA88'},
+  {id:'siam',number:'02',name:'Siam Stereo',meta:'Thailand · Indie / Pop',label:'IN THE MIX',mark:'S',submark:'FM',bg:'#845B46',fg:'#F0D6B8',accent:'#D57B49'},
+  {id:'mellow',number:'03',name:'Mellow Frequencies',meta:'Worldwide · Easy Listening',label:'SLOW RADIO',mark:'M',submark:'//',bg:'#4B4C3C',fg:'#E1D6AE',accent:'#A6A37C'},
+  {id:'blue',number:'04',name:'Blue Note Hours',meta:'USA · Jazz',label:'AFTER DARK',mark:'B',submark:'33',bg:'#465A60',fg:'#E5DFCE',accent:'#93A9AC'},
+  {id:'city',number:'05',name:'City Pop Radio',meta:'Japan · Pop',label:'CITY SOUNDS',mark:'C',submark:'24',bg:'#644A48',fg:'#F5DED3',accent:'#CA9E8A'},
+  {id:'world',number:'06',name:'World Frequencies',meta:'Worldwide · Eclectic',label:'GLOBAL WAVES',mark:'W',submark:'11',bg:'#53564B',fg:'#D8DAB7',accent:'#AAB495'}
+];
+const tracks=[
+  {id:'a',title:'A Little Time',artist:'Aurora Coast',album:'Low Tide',time:'4:18',format:'FLAC',coverBg:'#81725B',coverInk:'#E1B784',coverWord:'LOW TIDE'},
+  {id:'b',title:'Golden Hour',artist:'June Fields',album:'Sunroom',time:'3:46',format:'M4A',coverBg:'#7D6558',coverInk:'#E9C09C',coverWord:'JUNE'},
+  {id:'c',title:'After the Rain',artist:'Ivy Lane',album:'Blue Hour',time:'5:02',format:'FLAC',coverBg:'#4A5C61',coverInk:'#9AB4AC',coverWord:'BLUE HOUR'},
+  {id:'d',title:'Satellites',artist:'The Satellites',album:'Orbit',time:'4:22',format:'MP3',coverBg:'#62566B',coverInk:'#BDA2B0',coverWord:'ORBIT'},
+  {id:'e',title:'Warm Static',artist:'Golden Hour',album:'Dusk Radio',time:'3:54',format:'FLAC',coverBg:'#5A624E',coverInk:'#C4BA89',coverWord:'DUSK'}
+];
+const radio={selected:'night',playing:true,query:'',filter:'ALL',favorites:new Set(['night','blue'])};
+const music={selected:'a',playing:true,query:''};
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function selectRadio(id){radio.selected=id;radio.playing=true;renderRadio()}
+function toggleRadio(){radio.playing=!radio.playing;renderRadio()}
+function toggleFavorite(id){radio.favorites.has(id)?radio.favorites.delete(id):radio.favorites.add(id);renderRadio()}
+function setRadioQuery(q){radio.query=q;renderRadio()}
+function setFilter(f){radio.filter=f;renderRadio()}
+function setMusicQuery(q){music.query=q;renderMusic()}
+function selectTrack(id){music.selected=id;music.playing=true;renderMusic()}
+function toggleMusic(){music.playing=!music.playing;renderMusic()}
+function playAll(){music.selected=tracks[0].id;music.playing=true;renderMusic();notify('Playing your collection')}
+function shuffleMusic(){music.selected=tracks[Math.floor(Math.random()*tracks.length)].id;music.playing=true;renderMusic();notify('Shuffled collection')}
+function trackMenu(id){const t=tracks.find(t=>t.id===id);notify((t?t.title:'Track')+' added to queue · demo')}
+function notify(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>el.classList.remove('show'),1900)}
+function focusPhone(m){document.getElementById(m==='radio'?'radioPhone':'musicPhone').scrollIntoView({behavior:'smooth',block:'start'})}
+function renderRadio(){
+  const filterLabels=['ALL','FAVORITES','JAZZ','POP'];
+  document.getElementById('radioFilters').innerHTML=filterLabels.map(f=>`<button class="${radio.filter===f?'selected':''}" aria-pressed="${radio.filter===f}" onclick="setFilter('${f}')">${f}</button>`).join('');
+  const data=stations.filter(s=>(s.name+' '+s.meta+' '+s.label).toLowerCase().includes(radio.query.toLowerCase())&&(
+      radio.filter==='ALL'||radio.filter==='FAVORITES'&&radio.favorites.has(s.id)||radio.filter==='JAZZ'&&/jazz/i.test(s.meta)||radio.filter==='POP'&&/pop/i.test(s.meta)
+  ));
+  document.getElementById('stationCount').textContent=String(data.length).padStart(2,'0')+' PRESETS';
+  document.getElementById('stationList').innerHTML=data.length?data.map(s=>{
+    const active=radio.selected===s.id;
+    const favorite=radio.favorites.has(s.id);
+    const rightLabel=active?(radio.playing?'ON AIR':'PAUSED'):s.label;
+    return `<article class="station-card ${active&&radio.playing?'active':''}" style="--station-accent:${s.accent}">
+      <div class="station-meta-strip"><span class="left">PRESET / ${s.number}</span><span class="right">${active&&radio.playing?'<span class="led"></span>LIVE':'◦ INDEXED'}</span></div>
+      <div class="station-body">
+        <button class="station-press" onclick="selectRadio('${s.id}')" aria-label="Play ${esc(s.name)}">
+          <span class="station-logo" style="--logo-bg:${s.bg};--logo-fg:${s.fg}"><b>${s.mark}</b><small>${s.submark}</small></span>
+          <span style="flex:1;min-width:0"><span class="station-title">${esc(s.name)}</span><span class="station-desc">${esc(s.meta)}</span></span>
+        </button>
+        <div class="station-actions">
+          <button class="fav ${favorite?'on':''}" aria-label="${favorite?'Remove favorite':'Favorite'} ${esc(s.name)}" onclick="toggleFavorite('${s.id}')">${favorite?'♥':'♡'}</button>
+          <button class="station-key" aria-label="${active&&radio.playing?'Pause':'Play'} ${esc(s.name)}" onclick="${active? 'toggleRadio()': `selectRadio('${s.id}')`}">${active&&radio.playing?'Ⅱ':'▶'}</button>
+        </div>
+      </div>
+      <div class="station-foot"><span>${active&&radio.playing?'<span class="led"></span>TRANSMITTING':'STEREO / INTERNET RADIO'}</span><span>${active&&radio.playing?'<span class="levels"><i></i><i></i><i></i></span>':esc(rightLabel)}</span></div>
+    </article>`;
+  }).join(''):'<div class="blank">No matching stations.<br>Try changing the filter.</div>';
+  const current=stations.find(s=>s.id===radio.selected);
+  document.getElementById('needle').style.left=`${(stations.indexOf(current)/(stations.length-1)*94+3).toFixed(2)}%`;
+  document.getElementById('dialStatus').textContent=(radio.playing?'● ON AIR':'○ PAUSED')+' / '+current.number;
+  document.getElementById('radioMini').innerHTML=`<span class="mini-symbol">${current.mark}</span><span style="min-width:0;flex:1"><span class="mini-title">${esc(current.name)}</span><span class="mini-source">${radio.playing?'● LIVE · SIDE A':'PAUSED · SIDE A'}</span></span><button onclick="toggleRadio()" aria-label="${radio.playing?'Pause':'Play'} radio">${radio.playing?'Ⅱ':'▶'}</button>`;
+}
+function renderMusic(){
+  const data=tracks.filter(t=>(t.title+' '+t.artist+' '+t.album).toLowerCase().includes(music.query.toLowerCase()));
+  document.getElementById('trackCount').textContent=String(data.length).padStart(2,'0')+' TRACKS';
+  document.getElementById('trackList').innerHTML=data.length?data.map((t,index)=>{
+    const active=music.selected===t.id;
+    return `<article class="track-row ${active?'active':''}">
+        <span class="track-number">${String(tracks.indexOf(t)+1).padStart(2,'0')}</span>
+        <span class="track-cover" style="--cover-bg:${t.coverBg};--cover-ink:${t.coverInk}"><span class="record"></span><span class="cover-word">${esc(t.coverWord)}</span></span>
+        <button class="track-main" onclick="${active?'toggleMusic()':`selectTrack('${t.id}')`}" aria-label="${active&&music.playing?'Pause':'Play'} ${esc(t.title)}">
+          <span class="track-title">${esc(t.title)}</span>
+          <span class="track-artist">${esc(t.artist)} · ${esc(t.album)}</span>
+          <span class="track-type">${active&&music.playing?'● NOW PLAYING':esc(t.format)+' / LOCAL'}</span>
+          ${active?`<span class="track-progress"><i style="width:37%"></i></span>`:''}
+        </button>
+        <span class="track-right"><span class="duration">${t.time}</span><button class="more" aria-label="Add ${esc(t.title)} to queue" onclick="trackMenu('${t.id}')">⋮</button></span>
+      </article>`;
+  }).join(''):'<div class="blank">No matching songs.</div>';
+  const current=tracks.find(t=>t.id===music.selected);
+  document.getElementById('musicMini').innerHTML=`<span class="mini-symbol">♫</span><span style="min-width:0;flex:1"><span class="mini-title">${esc(current.title)}</span><span class="mini-source">${music.playing?'● PLAYING · SIDE B':'PAUSED · SIDE B'}</span></span><button onclick="toggleMusic()" aria-label="${music.playing?'Pause':'Play'} music">${music.playing?'Ⅱ':'▶'}</button>`;
+}
+function toggleTheme(){const el=document.documentElement;const light=el.dataset.theme!=='light';el.dataset.theme=light?'light':'dark';document.getElementById('themeLabel').textContent=light?'Switch to dark':'Switch to light'}
+renderRadio();renderMusic();
+</script>
+</body>
+</html>
