@@ -15,12 +15,15 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import app.readyo.MainActivity
+import app.readyo.core.model.AudioItem
+import app.readyo.feature.radio.data.RecentStationStore
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
 @androidx.annotation.OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
+    private var listeningTracker: ListeningTracker? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -38,9 +41,34 @@ class PlaybackService : MediaSessionService() {
                 setHandleAudioBecomingNoisy(true)
             }
         val sessionPlayer = SessionPlayer(player)
+        listeningTracker = ListeningTracker(this, player)
+        val history = RecentStationStore(this)
         sessionPlayer.addListener(
             object : Player.Listener {
                 override fun onEvents(player: Player, events: Player.Events) {
+                    if (
+                        player.isPlaying &&
+                            (events.contains(Player.EVENT_IS_PLAYING_CHANGED) ||
+                                events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION))
+                    ) {
+                        val item = player.currentMediaItem
+                        val uri = item?.localConfiguration?.uri
+                        if (
+                            item != null &&
+                                uri != null &&
+                                item.mediaMetadata.extras?.getBoolean("radio") == true
+                        ) {
+                            history.record(
+                                AudioItem(
+                                    item.mediaId,
+                                    item.mediaMetadata.title.toString(),
+                                    item.mediaMetadata.artist?.toString().orEmpty(),
+                                    uri.toString(),
+                                    radio = true,
+                                )
+                            )
+                        }
+                    }
                     if (player.mediaItemCount == 0 && player.playbackState == Player.STATE_IDLE) {
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         stopSelf()
@@ -126,6 +154,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        listeningTracker?.close()
+        listeningTracker = null
         session?.run {
             player.release()
             release()

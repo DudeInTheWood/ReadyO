@@ -7,6 +7,7 @@ import app.readyo.feature.music.domain.MusicFolderCollection
 enum class MusicLibraryScope {
     AllSongs,
     Folders,
+    Genres,
 }
 
 data class MusicLibraryUiState(
@@ -23,9 +24,13 @@ data class MusicLibraryUiState(
     val collections: List<MusicFolderCollection> = emptyList(),
     val selectedFolder: MusicFolderCollection? = null,
     val visibleTracks: List<AudioItem> = emptyList(),
+    val genres: List<app.readyo.feature.music.domain.MusicGenre> = emptyList(),
+    val selectedGenre: app.readyo.feature.music.domain.MusicGenre? = null,
 )
 
 sealed interface MusicLibraryAction {
+    data class OpenGenre(val id: String) : MusicLibraryAction
+
     data class ChangeScope(val scope: MusicLibraryScope) : MusicLibraryAction
 
     data class OpenFolder(val id: String) : MusicLibraryAction

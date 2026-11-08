@@ -34,6 +34,33 @@ class MusicLibraryViewModelTest {
     }
 
     @Test
+    fun folderWithOnlyDescendantsAppearsAndBackRestoresItsChildren() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val parent = app.readyo.feature.music.domain.FolderCrumb("parent", "Music")
+        val albums = MusicDirectory("child", "Albums", "Music/Albums", listOf(parent))
+        val child = MusicFolderCollection(albums, setOf(storedTrack.id))
+        val repository =
+            FakeMusicRepository(
+                MusicLibrarySnapshot(tracks = listOf(storedTrack), collections = listOf(child))
+            )
+        val vm = MusicLibraryViewModel(repository).also { store.put("music", it) }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
+        vm.onAction(MusicLibraryAction.ChangeScope(MusicLibraryScope.Folders))
+        runCurrent()
+        assertEquals(listOf(parent.id), vm.uiState.value.collections.map { it.directory.id })
+        vm.onAction(MusicLibraryAction.OpenFolder(parent.id))
+        runCurrent()
+        assertEquals(listOf(child), vm.uiState.value.collections)
+        assertTrue(vm.uiState.value.visibleTracks.isEmpty())
+        vm.onAction(MusicLibraryAction.OpenFolder(albums.id))
+        runCurrent()
+        assertEquals(listOf(storedTrack), vm.uiState.value.visibleTracks)
+        vm.onAction(MusicLibraryAction.BackToFolders)
+        runCurrent()
+        assertEquals(parent.id, vm.uiState.value.selectedFolder?.directory?.id)
+    }
+
+    @Test
     fun refreshPublishesStoredTracksWithoutAutoPlaying() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val repository = FakeMusicRepository()

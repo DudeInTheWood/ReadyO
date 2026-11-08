@@ -36,6 +36,7 @@ fun RadioScreen(
     onBack: () -> Unit,
     onPlay: (List<AudioItem>, Int) -> Unit,
 ) {
+    val stations = if (isSearch) state.stations else state.recentStations
     Box(modifier, contentAlignment = Alignment.TopCenter) {
         LazyColumn(
             modifier = Modifier.widthIn(max = 760.dp).fillMaxSize(),
@@ -56,8 +57,8 @@ fun RadioScreen(
             }
             item {
                 PresetDial(
-                    state.stations.size,
-                    state.stations.indexOfFirst { it.id == lastStation?.id },
+                    stations.size,
+                    stations.indexOfFirst { it.id == lastStation?.id },
                     playbackStatus,
                 )
             }
@@ -82,25 +83,38 @@ fun RadioScreen(
                                     playbackStatus == PlaybackStatus.Paused
                             )
                                 onToggle()
-                            else onPlay(listOf(it), 0)
+                            else
+                                onPlay(
+                                    (listOf(it) + stations).distinctBy { station -> station.id },
+                                    0,
+                                )
                         },
                         onSearch,
                     )
                 }
-                item { SectionHeader("Popular stations") }
+                item { SectionHeader("Recently played") }
+                if (stations.isEmpty())
+                    item {
+                        ReadyOEmptyState(
+                            "No recent stations yet",
+                            "Choose a category or search for a station to start listening.",
+                        )
+                    }
             }
-            if (state.isLoading) {
+            if (isSearch && state.isLoading) {
                 item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             }
-            state.error?.let { message ->
-                item { ReadyOErrorState(message) { onAction(RadioAction.Retry) } }
-            }
-            if (!state.isLoading && state.error == null && state.stations.isEmpty()) {
+            state.error
+                ?.takeIf { isSearch }
+                ?.let { message ->
+                    item { ReadyOErrorState(message) { onAction(RadioAction.Retry) } }
+                }
+            if (isSearch && !state.isLoading && state.error == null && stations.isEmpty()) {
                 item {
                     ReadyOEmptyState("No matching stations", "Try another station name or preset.")
                 }
             }
-            itemsIndexed(state.stations, key = { _, station -> station.id }) { index, station ->
+            itemsIndexed(stations, key = { _, station -> station.id }) { index, station ->
                 val current = station.id == lastStation?.id
                 StationRow(station, index, playbackStatus.takeIf { current }) {
                     if (
@@ -108,7 +122,7 @@ fun RadioScreen(
                             playbackStatus in listOf(PlaybackStatus.Playing, PlaybackStatus.Paused)
                     )
                         onToggle()
-                    else onPlay(state.stations, index)
+                    else onPlay(stations, index)
                 }
             }
         }

@@ -31,10 +31,10 @@ class RadioViewModelTest {
         viewModel.onAction(RadioAction.SearchChanged("jazz"))
         advanceTimeBy(349)
         runCurrent()
-        assertEquals(listOf(""), repository.queries)
+        assertTrue(repository.queries.isEmpty())
         advanceTimeBy(1)
         runCurrent()
-        assertEquals(listOf("", "jazz"), repository.queries)
+        assertEquals(listOf("jazz"), repository.queries)
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
@@ -43,6 +43,7 @@ class RadioViewModelTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val repository = FakeRadioRepository().apply { pending = CompletableDeferred() }
         val viewModel = RadioViewModel(repository).also { store.put("radio", it) }
+        viewModel.onAction(RadioAction.OpenDirectory(RadioFilter.All))
         runCurrent()
         viewModel.onAction(RadioAction.SearchChanged("new"))
         runCurrent()
@@ -58,6 +59,7 @@ class RadioViewModelTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val repository = FakeRadioRepository().apply { fail = true }
         val viewModel = RadioViewModel(repository).also { store.put("radio", it) }
+        viewModel.onAction(RadioAction.OpenDirectory(RadioFilter.All))
         advanceUntilIdle()
         assertNotNull(viewModel.uiState.value.error)
         repository.fail = false

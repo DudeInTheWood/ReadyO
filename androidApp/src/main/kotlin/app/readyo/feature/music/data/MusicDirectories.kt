@@ -1,5 +1,6 @@
 package app.readyo.feature.music.data
 
+import app.readyo.feature.music.domain.FolderCrumb
 import app.readyo.feature.music.domain.MusicDirectory
 
 /** Device and document-provider scans use the same folder identity for shared storage. */
@@ -12,6 +13,16 @@ internal fun storageDirectory(documentId: String): MusicDirectory {
         id = storageIdentity("$volume:$relativePath"),
         name = relativePath.substringAfterLast('/').ifBlank { storageName },
         path = listOf(storageName, relativePath).filter { it.isNotBlank() }.joinToString(" / "),
+        ancestors =
+            buildList {
+                if (relativePath.isNotEmpty())
+                    add(FolderCrumb(storageIdentity("$volume:"), storageName))
+                var prefix = ""
+                for (part in relativePath.split('/').dropLast(1)) {
+                    prefix = if (prefix.isEmpty()) part else "$prefix/$part"
+                    add(FolderCrumb(storageIdentity("$volume:$prefix"), part))
+                }
+            },
     )
 }
 

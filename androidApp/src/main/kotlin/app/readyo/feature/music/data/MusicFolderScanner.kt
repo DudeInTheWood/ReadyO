@@ -5,11 +5,14 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.DocumentsContract
 import app.readyo.core.model.AudioItem
+import app.readyo.core.playback.localTrackTitle
+import app.readyo.feature.music.domain.FolderCrumb
 import app.readyo.feature.music.domain.IndexedTrack
 import app.readyo.feature.music.domain.MusicDirectory
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
+@kotlinx.serialization.Serializable
 data class FolderScan(val name: String, val tracks: List<IndexedTrack>)
 
 class MusicFolderScanner(private val context: Context) {
@@ -48,7 +51,15 @@ class MusicFolderScanner(private val context: Context) {
                     val fileName = cursor.getString(1).orEmpty()
                     val mimeType = cursor.getString(2).orEmpty()
                     if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
-                        pending.add(MusicDirectory(id, fileName, "${parent.path}/$fileName"))
+                        pending.add(
+                            MusicDirectory(
+                                id,
+                                fileName,
+                                "${parent.path}/$fileName",
+                                parent.ancestors +
+                                    FolderCrumb("${root.authority}:$parentId", parent.name),
+                            )
+                        )
                     } else if (
                         mimeType.startsWith("audio/") ||
                             fileName.substringAfterLast('.').lowercase() in AUDIO_EXTENSIONS
@@ -74,21 +85,24 @@ class MusicFolderScanner(private val context: Context) {
     private fun readMetadata(uri: Uri, identity: String, fileName: String): AudioItem {
         var title = fileName.substringBeforeLast('.')
         var artist = ""
+        var genre = ""
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(context, uri)
             title =
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.takeIf {
-                    it.isNotBlank()
-                } ?: title
+                localTrackTitle(
+                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
+                    title,
+                )
             artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST).orEmpty()
+            genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE).orEmpty()
         } catch (_: Exception) {
             // Unrecognized metadata should not prevent browsing a folder; playback reports codec
             // errors.
         } finally {
             retriever.release()
         }
-        return AudioItem(identity, title, artist, uri.toString(), radio = false)
+        return AudioItem(identity, title, artist, uri.toString(), radio = false, genre = genre)
     }
 
     companion object {

@@ -1,8 +1,10 @@
 package app.readyo.feature.music.domain
 
 import app.readyo.core.model.AudioItem
+import kotlinx.serialization.Serializable
 
 /** A provider-independent identity prevents overlapping folders/device scans duplicating a song. */
+@Serializable
 data class IndexedTrack(
     val item: AudioItem,
     val identity: String,

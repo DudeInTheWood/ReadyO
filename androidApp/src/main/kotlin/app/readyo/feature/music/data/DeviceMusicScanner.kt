@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import app.readyo.core.model.AudioItem
+import app.readyo.core.playback.localTrackTitle
 import app.readyo.feature.music.domain.IndexedTrack
 import app.readyo.feature.music.domain.MusicDirectory
 import java.io.File
@@ -39,7 +40,9 @@ class DeviceMusicScanner(private val context: Context) {
             } else {
                 @Suppress("DEPRECATION") add(MediaStore.Audio.Media.DATA)
             }
+            if (Build.VERSION.SDK_INT >= 30) add(MediaStore.Audio.Media.GENRE)
         }
+        val legacyGenres = if (Build.VERSION.SDK_INT < 30) readLegacyGenres() else emptyMap()
         val tracks = mutableListOf<IndexedTrack>()
         context.contentResolver
             .query(
@@ -55,7 +58,7 @@ class DeviceMusicScanner(private val context: Context) {
                     val id = cursor.getLong(0)
                     val fileName = cursor.getString(3).orEmpty()
                     val title =
-                        cursor.getString(1).orEmpty().ifBlank { fileName.substringBeforeLast('.') }
+                        localTrackTitle(cursor.getString(1), fileName.substringBeforeLast('.'))
                     val artist =
                         cursor.getString(2).orEmpty().takeUnless { it == "<unknown>" }.orEmpty()
                     val uri = ContentUris.withAppendedId(collection, id).toString()
@@ -76,6 +79,16 @@ class DeviceMusicScanner(private val context: Context) {
                                             "device-folder:${parent.path}",
                                             parent.name,
                                             parent.path,
+                                            generateSequence(parent.parentFile) { it.parentFile }
+                                                .filter { it.name.isNotBlank() }
+                                                .toList()
+                                                .asReversed()
+                                                .map {
+                                                    app.readyo.feature.music.domain.FolderCrumb(
+                                                        "device-folder:${it.path}",
+                                                        it.name,
+                                                    )
+                                                },
                                         )
                                     }
                                 }
@@ -90,13 +103,62 @@ class DeviceMusicScanner(private val context: Context) {
                         } else uri
                     tracks +=
                         IndexedTrack(
-                            AudioItem("device:$id", title, artist, uri, radio = false),
+                            AudioItem(
+                                "device:$id",
+                                title,
+                                artist,
+                                uri,
+                                radio = false,
+                                genre =
+                                    if (Build.VERSION.SDK_INT >= 30)
+                                        cursor
+                                            .getString(
+                                                cursor.getColumnIndexOrThrow(
+                                                    MediaStore.Audio.Media.GENRE
+                                                )
+                                            )
+                                            .orEmpty()
+                                    else legacyGenres[id].orEmpty(),
+                            ),
                             identity,
                             directory,
                         )
                 }
             } ?: error("Device music couldn't be read. Please try again.")
         return tracks
+    }
+
+    @Suppress("DEPRECATION")
+    private fun readLegacyGenres(): Map<Long, String> {
+        val genres = mutableMapOf<Long, String>()
+        context.contentResolver
+            .query(
+                MediaStore.Audio.Genres.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Audio.Genres._ID, MediaStore.Audio.Genres.NAME),
+                null,
+                null,
+                null,
+            )
+            ?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(1).orEmpty()
+                    context.contentResolver
+                        .query(
+                            MediaStore.Audio.Genres.Members.getContentUri(
+                                "external",
+                                cursor.getLong(0),
+                            ),
+                            arrayOf(MediaStore.Audio.Genres.Members.AUDIO_ID),
+                            null,
+                            null,
+                            null,
+                        )
+                        ?.use { members ->
+                            while (members.moveToNext()) genres[members.getLong(0)] = name
+                        }
+                }
+            }
+        return genres
     }
 
     companion object {

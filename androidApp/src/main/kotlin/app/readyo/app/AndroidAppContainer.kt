@@ -3,15 +3,26 @@ package app.readyo.app
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import app.readyo.core.playback.AndroidPlayer
+import app.readyo.feature.music.data.AndroidDailyMixRepository
 import app.readyo.feature.music.data.AndroidMusicLibraryRepository
 import app.readyo.feature.radio.data.RadioBrowserRepository
+import app.readyo.feature.radio.data.RecentStationStore
 
 /** Activity-retained platform resources; the service remains the owner of actual audio playback. */
 class AndroidAppContainer(application: Application) : AndroidViewModel(application) {
     private val player = AndroidPlayer(application)
     private val radioRepository = RadioBrowserRepository()
+    private val musicRepository = AndroidMusicLibraryRepository(application)
+    private val dailyMix = AndroidDailyMixRepository(application, musicRepository)
     val dependencies =
-        AppDependencies(player, radioRepository, AndroidMusicLibraryRepository(application))
+        AppDependencies(
+            player,
+            radioRepository,
+            musicRepository,
+            RecentStationStore(application).stations,
+            dailyMix,
+            AndroidAppTabStore(application),
+        )
 
     private var importResultHandler: ((List<String>) -> Unit)? = null
     private var folderResultHandler: ((String?) -> Unit)? = null
@@ -45,6 +56,7 @@ class AndroidAppContainer(application: Application) : AndroidViewModel(applicati
     }
 
     override fun onCleared() {
+        dailyMix.close()
         player.close()
         radioRepository.close()
         importResultHandler = null

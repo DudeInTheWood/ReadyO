@@ -19,4 +19,5 @@ data class PlayerState(
     val duration: Long = 0,
     val error: String? = null,
     val canSkipNext: Boolean = false,
+    val sourceQuality: String = "",
 )

@@ -2,10 +2,19 @@ package app.readyo.feature.music.domain
 
 import app.readyo.core.model.AudioItem
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.Serializable
 
 data class MusicFolder(val id: String, val name: String, val trackCount: Int = 0)
 
-data class MusicDirectory(val id: String, val name: String, val path: String)
+@Serializable data class FolderCrumb(val id: String, val name: String)
+
+@Serializable
+data class MusicDirectory(
+    val id: String,
+    val name: String,
+    val path: String,
+    val ancestors: List<FolderCrumb> = emptyList(),
+)
 
 data class MusicFolderCollection(val directory: MusicDirectory, val trackIds: Set<String>)
 
@@ -30,6 +39,8 @@ interface MusicLibraryRepository {
     val library: StateFlow<MusicLibrarySnapshot>
 
     suspend fun refresh()
+
+    suspend fun load() = refresh()
 
     suspend fun importAudio(sources: List<String>)
 

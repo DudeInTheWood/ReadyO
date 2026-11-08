@@ -15,6 +15,16 @@ android {
         versionName = "0.1.0"
     }
     buildFeatures { compose = true }
+    buildTypes {
+        release {
+            if (providers.gradleProperty("signReleaseWithDebugKey").orNull == "true") {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

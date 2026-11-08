@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.AtomicFile
 import app.readyo.core.model.AudioItem
+import app.readyo.core.playback.localTrackTitle
 import app.readyo.feature.music.domain.IndexedTrack
 import app.readyo.feature.music.domain.MusicFolder
 import app.readyo.feature.music.domain.MusicLibraryRepository
@@ -37,27 +38,34 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
     private val sourceStore = MusicSourceStore(context)
     private val deviceScanner = DeviceMusicScanner(context)
     private val folderScanner = MusicFolderScanner(context)
+    private val scanCache = MusicScanCache(context)
 
-    override suspend fun refresh() = updateSources { it }
+    override suspend fun load() = updateSources { it }
 
-    override suspend fun scanDevice() = updateSources { sources ->
-        check(deviceScanner.hasPermission) {
-            "Allow music access to scan this device, or choose a music folder instead."
+    override suspend fun refresh() = updateSources(refreshAll = true) { it }
+
+    override suspend fun scanDevice() =
+        updateSources(refreshDevice = true) { sources ->
+            check(deviceScanner.hasPermission) {
+                "Allow music access to scan this device, or choose a music folder instead."
+            }
+            sources.copy(deviceScanEnabled = true)
         }
-        sources.copy(deviceScanEnabled = true)
-    }
 
-    override suspend fun addFolder(source: String) = updateSources { sources ->
-        val uri = Uri.parse(source)
-        context.contentResolver.takePersistableUriPermission(
-            uri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
-        sources.copy(
-            folders =
-                (sources.folders + SavedMusicFolder(source, "Music folder")).distinctBy { it.uri }
-        )
-    }
+    override suspend fun addFolder(source: String) =
+        updateSources(refreshFolder = source) { sources ->
+            val uri = Uri.parse(source)
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+            sources.copy(
+                folders =
+                    (sources.folders + SavedMusicFolder(source, "Music folder")).distinctBy {
+                        it.uri
+                    }
+            )
+        }
 
     override suspend fun removeFolder(id: String) = updateSources { sources ->
         runCatching {
@@ -69,14 +77,20 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
         sources.copy(folders = sources.folders.filterNot { it.uri == id })
     }
 
-    private suspend fun updateSources(transform: (MusicSources) -> MusicSources) =
+    private suspend fun updateSources(
+        refreshAll: Boolean = false,
+        refreshDevice: Boolean = false,
+        refreshFolder: String? = null,
+        transform: (MusicSources) -> MusicSources,
+    ) =
         withContext(Dispatchers.IO) {
             mutationLock.withLock {
                 mutableLibrary.update { it.copy(isScanning = true, error = null) }
                 try {
-                    val sources = transform(sourceStore.read())
-                    sourceStore.write(sources)
-                    rebuildLibrary(sources)
+                    val previous = sourceStore.read()
+                    val sources = transform(previous)
+                    if (sources != previous) sourceStore.write(sources)
+                    rebuildLibrary(sources, refreshAll, refreshDevice, refreshFolder)
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (exception: Exception) {
@@ -95,7 +109,15 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
             }
         }
 
-    private suspend fun rebuildLibrary(sources: MusicSources) {
+    private suspend fun rebuildLibrary(
+        sources: MusicSources,
+        refreshAll: Boolean = false,
+        refreshDevice: Boolean = false,
+        refreshFolder: String? = null,
+    ) {
+        val cached = scanCache.read()
+        var deviceTracks: List<IndexedTrack>? = null
+        val folderScans = mutableMapOf<String, FolderScan>()
         val groups =
             mutableListOf(
                 readImportedTracks().map { IndexedTrack(it, it.uri, importedFilesDirectory) }
@@ -105,7 +127,11 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
         val failures = mutableListOf<String>()
         if (sources.deviceScanEnabled) {
             try {
-                groups += deviceScanner.scan()
+                check(deviceScanner.hasPermission)
+                deviceTracks =
+                    if (refreshAll || refreshDevice) deviceScanner.scan()
+                    else cached.device ?: deviceScanner.scan()
+                groups += deviceTracks
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
@@ -115,7 +141,16 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
         }
         for (folder in sources.folders) {
             try {
-                val result = folderScanner.scan(Uri.parse(folder.uri))
+                val uri = Uri.parse(folder.uri)
+                check(
+                    context.contentResolver.persistedUriPermissions.any {
+                        it.uri == uri && it.isReadPermission
+                    }
+                )
+                val result =
+                    if (refreshAll || refreshFolder == folder.uri) folderScanner.scan(uri)
+                    else cached.folders[folder.uri] ?: folderScanner.scan(uri)
+                folderScans[folder.uri] = result
                 groups += result.tracks
                 folders += MusicFolder(folder.uri, result.name, result.tracks.size)
                 savedFolders += folder.copy(name = result.name)
@@ -127,7 +162,15 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
                 failures += "${folder.name} couldn't be read. Choose it again to restore access."
             }
         }
-        sourceStore.write(sources.copy(folders = savedFolders))
+        if (savedFolders != sources.folders) sourceStore.write(sources.copy(folders = savedFolders))
+        val updated = CachedScans(deviceTracks, folderScans)
+        if (updated != cached) {
+            try {
+                scanCache.write(updated)
+            } catch (_: java.io.IOException) {
+                // A full cache volume must not prevent browsing a successful scan.
+            }
+        }
         mutableLibrary.update { current ->
             current.copy(
                 tracks = mergeLibraryTracks(groups),
@@ -142,9 +185,32 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
 
     private fun readImportedTracks(): List<AudioItem> =
         if (indexFile.baseFile.exists()) {
-            Json.decodeFromString<List<AudioItem>>(indexFile.readFully().decodeToString()).filter {
-                File(Uri.parse(it.uri).path.orEmpty()).exists()
+            val stored =
+                Json.decodeFromString<List<AudioItem>>(indexFile.readFully().decodeToString())
+                    .filter {
+                        File(Uri.parse(it.uri).path.orEmpty()).exists()
+                    }
+            val upgraded = stored.map { item ->
+                if (item.genre != null) item
+                else {
+                    val reader = MediaMetadataRetriever()
+                    try {
+                        reader.setDataSource(context, Uri.parse(item.uri))
+                        item.copy(
+                            genre =
+                                reader
+                                    .extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE)
+                                    .orEmpty()
+                        )
+                    } catch (_: Exception) {
+                        item.copy(genre = "")
+                    } finally {
+                        runCatching { reader.release() }
+                    }
+                }
             }
+            if (upgraded != stored) saveIndex(upgraded)
+            upgraded
         } else emptyList()
 
     override suspend fun importAudio(sources: List<String>) =
@@ -217,12 +283,22 @@ class AndroidMusicLibraryRepository(context: Context) : MusicLibraryRepository {
         try {
             retriever.setDataSource(file.absolutePath)
             val title =
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-                    ?: displayName.substringBeforeLast('.')
+                localTrackTitle(
+                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
+                    displayName.substringBeforeLast('.'),
+                )
             val artist =
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
                     ?: "Imported audio"
-            return AudioItem(id, title, artist, Uri.fromFile(file).toString(), radio = false)
+            return AudioItem(
+                id,
+                title,
+                artist,
+                Uri.fromFile(file).toString(),
+                radio = false,
+                genre =
+                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE).orEmpty(),
+            )
         } finally {
             retriever.release()
         }

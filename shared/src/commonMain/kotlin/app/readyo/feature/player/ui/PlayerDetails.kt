@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.readyo.core.designsystem.component.MicroLabel
@@ -64,7 +65,14 @@ internal fun PlayerDetails(
                 },
                 label = "Track metadata",
             ) { title ->
-                Text(title, fontSize = 26.sp, lineHeight = 33.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    title,
+                    fontSize = 26.sp,
+                    lineHeight = 33.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             if (!state.item?.subtitle.isNullOrBlank()) {
                 Text(
@@ -88,6 +96,7 @@ internal fun PlayerDetails(
                 letterSpacing = 1.sp,
                 color = MaterialTheme.colorScheme.primary,
             )
+            if (state.sourceQuality.isNotEmpty()) MicroLabel(state.sourceQuality)
             if (state.item?.radio == false && state.duration > 0) PlaybackTimeline(state, onAction)
         }
         state.error?.let { message ->

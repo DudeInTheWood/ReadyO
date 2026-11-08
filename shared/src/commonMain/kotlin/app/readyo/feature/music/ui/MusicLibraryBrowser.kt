@@ -2,6 +2,7 @@ package app.readyo.feature.music.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,11 +50,23 @@ internal fun MusicScopeSelector(scope: MusicLibraryScope, onSelect: (MusicLibrar
                 contentColor = if (active) colors.primary else colors.onSurfaceVariant,
                 border = BorderStroke(1.dp, if (active) colors.primary else colors.outlineVariant),
             ) {
-                Text(
-                    if (option == MusicLibraryScope.AllSongs) "All songs" else "Folders",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    LibraryScopeIcon(option)
+                    Text(
+                        when (option) {
+                            MusicLibraryScope.AllSongs -> "All songs"
+                            MusicLibraryScope.Folders -> "Folders"
+                            MusicLibraryScope.Genres -> "Genres"
+                        },
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -100,11 +114,12 @@ internal fun MusicFolderRow(folder: MusicFolderCollection, onOpen: () -> Unit) {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    songCount(folder.trackIds.size),
-                    fontSize = 12.sp,
-                    color = colors.onSurfaceVariant,
-                )
+                if (folder.trackIds.isNotEmpty())
+                    Text(
+                        songCount(folder.trackIds.size),
+                        fontSize = 12.sp,
+                        color = colors.onSurfaceVariant,
+                    )
             }
             Text("›", fontSize = 24.sp, color = colors.onSurfaceVariant)
         }
@@ -112,16 +127,23 @@ internal fun MusicFolderRow(folder: MusicFolderCollection, onOpen: () -> Unit) {
 }
 
 @Composable
-internal fun MusicFolderHeading(folder: MusicFolderCollection, onBack: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        TextButton(onClick = onBack) { Text("‹ All folders") }
+internal fun MusicFolderHeading(folder: MusicFolderCollection, onNavigate: (String?) -> Unit) {
+    val scroll = rememberScrollState()
+    Row(Modifier.horizontalScroll(scroll), verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = { onNavigate(null) }) { Text("Folders") }
+        folder.directory.ancestors.forEach { ancestor ->
+            Text("›")
+            TextButton(onClick = { onNavigate(ancestor.id) }) { Text(ancestor.name) }
+        }
+        Text("›")
         Text(
             folder.directory.name,
-            fontSize = 24.sp,
-            lineHeight = 30.sp,
+            Modifier.padding(horizontal = 8.dp),
             fontWeight = FontWeight.SemiBold,
         )
-        Text(folder.directory.path, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    androidx.compose.runtime.LaunchedEffect(folder.directory.id, scroll.maxValue) {
+        scroll.scrollTo(scroll.maxValue)
     }
 }
 

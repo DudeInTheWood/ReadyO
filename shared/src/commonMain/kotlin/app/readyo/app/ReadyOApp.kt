@@ -52,22 +52,41 @@ fun ReadyOApp(
     onDeviceScanRequested: (() -> Unit) -> Unit = { it() },
     backHandler: @Composable (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
-    val appViewModel = viewModel { AppViewModel() }
-    val radioViewModel = viewModel { RadioViewModel(dependencies.radioRepository) }
+    val appViewModel = viewModel { AppViewModel(dependencies.tabStore) }
+    val radioViewModel = viewModel {
+        RadioViewModel(dependencies.radioRepository, dependencies.recentStations)
+    }
     val musicViewModel = viewModel { MusicLibraryViewModel(dependencies.musicRepository) }
+    val dailyMixViewModel = viewModel {
+        app.readyo.feature.music.presentation.DailyMixViewModel(dependencies.dailyMix)
+    }
     val playerViewModel = viewModel { PlayerViewModel(dependencies.player) }
 
     val destination by appViewModel.destination.collectAsStateWithLifecycle()
     val radioState by radioViewModel.uiState.collectAsStateWithLifecycle()
     val musicState by musicViewModel.uiState.collectAsStateWithLifecycle()
+    val dailyMix by dailyMixViewModel.state.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val playback = playerState.playback
     val expanded = playerState.isExpanded
 
     val browsingMusicFolder =
         destination == AppDestination.MusicLibrary && musicState.selectedFolder != null
-    backHandler(expanded || destination == AppDestination.RadioSearch || browsingMusicFolder) {
+    val browsingGenre =
+        destination == AppDestination.MusicLibrary && musicState.selectedGenre != null
+    backHandler(
+        expanded ||
+            destination == AppDestination.RadioSearch ||
+            browsingMusicFolder ||
+            browsingGenre
+    ) {
         if (expanded) playerViewModel.onAction(PlayerAction.Collapse)
+        else if (browsingGenre)
+            musicViewModel.onAction(
+                MusicLibraryAction.ChangeScope(
+                    app.readyo.feature.music.presentation.MusicLibraryScope.Genres
+                )
+            )
         else if (browsingMusicFolder) musicViewModel.onAction(MusicLibraryAction.BackToFolders)
         else appViewModel.onAction(AppAction.Back)
     }
@@ -124,25 +143,24 @@ fun ReadyOApp(
                             modifier = contentModifier,
                             onAction = radioViewModel::onAction,
                             onSearch = { filter ->
-                                radioViewModel.onAction(RadioAction.FilterChanged(filter))
+                                radioViewModel.onAction(RadioAction.OpenDirectory(filter))
                                 appViewModel.onAction(
                                     AppAction.Navigate(AppDestination.RadioSearch)
                                 )
                             },
                             onBack = { appViewModel.onAction(AppAction.Back) },
                             onPlay = { items, index ->
-                                val selected = items.getOrNull(index)
-                                if (selected?.radio == true && items.size == 1) {
-                                    val context = (items + radioState.stations).distinctBy { it.id }
-                                    playerViewModel.onAction(PlayerAction.Select(context, 0))
-                                } else {
-                                    playerViewModel.onAction(PlayerAction.Select(items, index))
-                                }
+                                playerViewModel.onAction(PlayerAction.Select(items, index))
                             },
                         )
                     AppDestination.MusicLibrary ->
                         MusicLibraryScreen(
                             state = musicState,
+                            dailyMix = dailyMix,
+                            onRefreshMix = dailyMixViewModel::refresh,
+                            onPlayMix = {
+                                playerViewModel.onAction(PlayerAction.Select(dailyMix.tracks, 0))
+                            },
                             playback = playback,
                             onToggle = { playerViewModel.onAction(PlayerAction.TogglePlayback) },
                             onShuffle = {

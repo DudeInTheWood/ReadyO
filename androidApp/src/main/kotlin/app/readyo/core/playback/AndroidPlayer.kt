@@ -13,6 +13,7 @@ import androidx.media3.session.SessionToken
 import app.readyo.core.model.AudioItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -23,6 +24,10 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 class AndroidPlayer(context: Context) : PlayerController {
+    private val appContext = context.applicationContext
+    private var tagsUri: String? = null
+    private var tagsJob: Job? = null
+    private var tags = LocalAudioTags()
     private val mutableState = MutableStateFlow(PlayerState())
     override val state = mutableState.asStateFlow()
     private var controller: MediaController? = null
@@ -83,6 +88,7 @@ class AndroidPlayer(context: Context) : PlayerController {
     private fun updatePlaybackState() {
         val player = controller ?: return
         if (player.mediaItemCount == 0 && pendingSelection == null) {
+            loadTags(null)
             mutableState.value = PlayerState()
             return
         }
@@ -96,7 +102,8 @@ class AndroidPlayer(context: Context) : PlayerController {
                         it.mediaId,
                         it.mediaMetadata.title?.toString().orEmpty(),
                         it.mediaMetadata.artist?.toString().orEmpty(),
-                        it.localConfiguration?.uri?.toString().orEmpty(),
+                        it.localConfiguration?.uri?.toString()
+                            ?: it.mediaMetadata.extras?.getString(LOCAL_URI_KEY).orEmpty(),
                         it.mediaMetadata.extras?.getBoolean("radio") ?: false,
                     )
                 }
@@ -109,9 +116,15 @@ class AndroidPlayer(context: Context) : PlayerController {
                     }
                     .orEmpty()
         }
+        loadTags(item?.takeUnless { it.radio }?.uri?.takeIf { it.isNotBlank() })
         mutableState.value =
             PlayerState(
-                item,
+                if (item != null && !item.radio)
+                    item.copy(
+                        title = localTrackTitle(tags.title, item.title),
+                        subtitle = tags.credits,
+                    )
+                else item,
                 when {
                     player.playbackState == Player.STATE_BUFFERING -> PlaybackStatus.Buffering
                     player.isPlaying -> PlaybackStatus.Playing
@@ -121,10 +134,26 @@ class AndroidPlayer(context: Context) : PlayerController {
                 },
                 player.currentPosition.coerceAtLeast(0),
                 player.duration.coerceAtLeast(0),
+                sourceQuality = tags.quality,
                 canSkipNext =
                     if (item?.radio == true) playbackContext.size > 1
                     else player.hasNextMediaItem(),
             )
+    }
+
+    private fun loadTags(uri: String?) {
+        if (uri == tagsUri) return
+        tagsJob?.cancel()
+        tagsUri = uri
+        tags = LocalAudioTags()
+        if (uri != null)
+            tagsJob = scope.launch {
+                val result = readLocalAudioTags(appContext, uri)
+                if (uri == tagsUri) {
+                    tags = result
+                    updatePlaybackState()
+                }
+            }
     }
 
     override fun select(items: List<AudioItem>, index: Int) {
@@ -155,6 +184,7 @@ class AndroidPlayer(context: Context) : PlayerController {
                                     .setExtras(
                                         Bundle().apply {
                                             putBoolean("radio", item.radio)
+                                            if (!item.radio) putString(LOCAL_URI_KEY, item.uri)
                                             if (radioContext != null)
                                                 putString(RADIO_CONTEXT_KEY, radioContext)
                                         }
@@ -224,6 +254,7 @@ class AndroidPlayer(context: Context) : PlayerController {
     }
 
     companion object {
+        private const val LOCAL_URI_KEY = "app.readyo.LOCAL_URI"
         private const val RADIO_CONTEXT_KEY = "app.readyo.RADIO_CONTEXT"
     }
 }

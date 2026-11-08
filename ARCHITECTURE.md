@@ -92,3 +92,11 @@ Run `format-kotlin.ps1` without `-Check` to format source/build files using ktfm
 Before finishing layout changes, inspect folded and unfolded screens, enlarged system text, search/error/empty states, and swipe/transport behavior. iOS runtime validation requires macOS/Xcode; the iOS native player and importer are still pending.
 
 Architecture references: [Android UI layer](https://developer.android.com/topic/architecture/ui-layer), [multiplatform ViewModel](https://kotlinlang.org/docs/multiplatform/compose-viewmodel.html).
+
+## Daily Mix and browsing persistence
+
+Music genres and folder hierarchy are derived in MusicLibraryViewModel. MusicLibraryScreen owns saveable scroll state per browse location. AndroidMusicLibraryRepository owns the versioned scan cache and genre migration for older imports.
+
+DailyMixViewModel exposes DailyMixRepository state and refresh actions. AndroidDailyMixRepository combines the cached library with device-local listening statistics and a persisted daily selection. ListeningTracker belongs to PlaybackService so listening continues to be counted while the Activity is closed. It uses elapsed audible time rather than seek position. Refreshing a mix only changes future selection, and PlayerViewModel starts the saved queue when Play mix is pressed.
+
+AppViewModel reads and writes AppTabStore through platform dependency injection. RecentStationStore records stations once audio actually starts and publishes preference changes to RadioViewModel.

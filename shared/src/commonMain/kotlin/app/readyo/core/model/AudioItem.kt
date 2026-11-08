@@ -10,4 +10,5 @@ data class AudioItem(
     val uri: String,
     val radio: Boolean,
     val artwork: String = "",
+    val genre: String? = null,
 )
