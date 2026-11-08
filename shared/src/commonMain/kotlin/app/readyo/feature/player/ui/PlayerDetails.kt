@@ -51,7 +51,7 @@ internal fun PlayerDetails(
     modifier: Modifier = Modifier,
     showMeters: Boolean = true,
 ) {
-    Column(modifier.padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -80,6 +80,8 @@ internal fun PlayerDetails(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     lineHeight = 21.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Text(
@@ -118,10 +120,6 @@ internal fun PlayerDetails(
             }
         }
         PlaybackControls(state.status, state.canSkipNext, onAction)
-        MicroLabel(
-            if (state.item?.radio == true) "INTERNET RADIO / ARCHIVE EDITION"
-            else "LOCAL AUDIO / ARCHIVE EDITION"
-        )
     }
 }
 

@@ -1,5 +1,7 @@
 package app.readyo.feature.player.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,35 +22,56 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.readyo.core.designsystem.component.MicroLabel
 import app.readyo.core.playback.PlayerState
 import app.readyo.feature.player.presentation.PlayerAction
 import app.readyo.feature.player.ui.component.CassetteArtwork
 import app.readyo.feature.player.ui.motion.DeckMotion
+import kotlinx.coroutines.delay
 
 @Composable
 fun NowPlayingScreen(state: PlayerState, motion: DeckMotion, onAction: (PlayerAction) -> Unit) {
+    val turn = remember { Animatable(0f) }
+    var previewStarted by rememberSaveable { mutableStateOf(false) }
+    var manualSideB by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(manualSideB) {
+        val sideB = manualSideB
+        if (sideB != null) {
+            turn.animateTo(if (sideB) 180f else 0f, tween(720))
+        } else if (!previewStarted) {
+            previewStarted = true
+            delay(400)
+            turn.animateTo(180f, tween(720))
+            delay(2000)
+            turn.animateTo(0f, tween(720))
+        }
+    }
+    val onFlip = { manualSideB = !(manualSideB ?: (turn.value >= 90f)) }
     BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
         val useTwoColumns = maxWidth >= 700.dp && maxHeight >= 420.dp
-        val showCompactMeters = state.item?.radio != false || maxHeight >= 1000.dp
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            PlayerHeader(state.item?.radio == true) { onAction(PlayerAction.Collapse) }
+            PlayerHeader { onAction(PlayerAction.Collapse) }
             if (useTwoColumns) {
                 Row(
                     Modifier.widthIn(max = 1120.dp)
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(horizontal = 24.dp),
+                        .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(28.dp),
                 ) {
-                    CassetteArtwork(state, motion, Modifier.weight(1.1f))
+                    CassetteArtwork(state, motion, turn.asState(), onFlip, Modifier.weight(1.1f))
                     PlayerDetails(
                         state,
                         motion,
@@ -57,21 +80,31 @@ fun NowPlayingScreen(state: PlayerState, motion: DeckMotion, onAction: (PlayerAc
                     )
                 }
             } else {
-                Column(
-                    Modifier.weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(22.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    CassetteArtwork(state, motion, Modifier.widthIn(max = 460.dp).fillMaxWidth())
-                    PlayerDetails(
-                        state,
-                        motion,
-                        onAction,
-                        Modifier.widthIn(max = 560.dp).fillMaxWidth(),
-                        showMeters = showCompactMeters,
+                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                    PlayerPageLayout(
+                        viewportHeight = maxHeight,
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 20.dp),
+                        cassette = {
+                            CassetteArtwork(
+                                state,
+                                motion,
+                                turn.asState(),
+                                onFlip,
+                                Modifier.fillMaxWidth(),
+                            )
+                        },
+                        details = {
+                            PlayerDetails(
+                                state,
+                                motion,
+                                onAction,
+                                Modifier.fillMaxWidth(),
+                                showMeters = false,
+                            )
+                        },
                     )
                 }
             }
@@ -80,8 +113,8 @@ fun NowPlayingScreen(state: PlayerState, motion: DeckMotion, onAction: (PlayerAc
 }
 
 @Composable
-private fun PlayerHeader(radio: Boolean, onClose: () -> Unit) {
-    Column(Modifier.widthIn(max = 1120.dp).fillMaxWidth().padding(bottom = 20.dp)) {
+private fun PlayerHeader(onClose: () -> Unit) {
+    Column(Modifier.widthIn(max = 1120.dp).fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().height(18.dp), contentAlignment = Alignment.Center) {
             Box(
                 Modifier.width(36.dp)
@@ -104,19 +137,6 @@ private fun PlayerHeader(radio: Boolean, onClose: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-        }
-        Column(
-            Modifier.padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                "Now playing.",
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Bold,
-                fontSize = 32.sp,
-                lineHeight = 38.sp,
-            )
-            MicroLabel(if (radio) "ARCHIVE EDITION / SIDE A" else "ARCHIVE EDITION / SIDE B")
         }
     }
 }
